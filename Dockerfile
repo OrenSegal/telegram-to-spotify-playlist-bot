@@ -1,18 +1,31 @@
-# Stage 1: Build environment
-FROM python:3.9-slim-buster AS builder
+# Use official Python runtime as base image
+FROM python:3.11-slim
 
+# Set working directory
 WORKDIR /app
 
-COPY requirements.txt requirements.txt
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Stage 2: Production image
-FROM python:3.9-slim-buster
+# Copy application code
+COPY main.py config.py ./
 
-WORKDIR /app
+# Create directory for Spotify cache
+RUN mkdir -p /app/.cache
 
-COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY . .
+# Expose port (configurable via APP_PORT env var, default 8000)
+EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+
+# Run the application
+CMD ["python", "main.py"]
