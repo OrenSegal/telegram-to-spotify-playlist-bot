@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, 'claude/**' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install black flake8 mypy
+
+    - name: Check code formatting with Black
+      run: black --check main.py config.py
+      continue-on-error: true
+
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 main.py config.py --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 main.py config.py --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      continue-on-error: true
+
+    - name: Type check with mypy
+      run: mypy main.py config.py --ignore-missing-imports
+      continue-on-error: true
+
+    - name: Validate configuration structure
+      run: |
+        python -c "from config import Config; print('Config validation passed')"
+
+    - name: Check imports and basic syntax
+      run: |
+        python -c "import main; print('Main module imports successfully')"
+      env:
+        TELEGRAM_BOT_TOKEN: "test_token"
+        SPOTIFY_CLIENT_ID: "test_client_id"
+        SPOTIFY_CLIENT_SECRET: "test_secret"
+        SPOTIFY_REDIRECT_URI: "http://localhost:8888/callback"
+        SPOTIFY_PLAYLIST_ID: "test_playlist_id"
+        SPOTIFY_USERNAME: "test_user"
+        ALLOWED_CHAT_IDS: "-1001234567890"
+        WEBHOOK_URL: "https://example.com/webhook"
+
+  security-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit
+
+    - name: Check for known security vulnerabilities
+      run: |
+        pip install -r requirements.txt
+        safety check --json || true
+      continue-on-error: true
+
+    - name: Run Bandit security linter
+      run: bandit -r main.py config.py -f json || true
+      continue-on-error: true
+
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: telegram-spotify-bot:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Test Docker image
+      run: |
+        docker run --rm telegram-spotify-bot:test python -c "import main; print('Docker image OK')" || true

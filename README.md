@@ -21,6 +21,26 @@ A Telegram bot that automatically reads Spotify links from group chats and adds 
 - Health check endpoint for monitoring
 - FastAPI-based web server with proper async handling
 
+## Quick Start
+
+For the fastest setup, use the interactive setup script:
+
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+Or use Make commands:
+
+```bash
+make install    # Install dependencies
+make auth       # Authenticate with Spotify
+make up         # Start with Docker Compose
+make logs       # View logs
+```
+
+For detailed setup instructions, see below.
+
 ## Prerequisites
 
 - Python 3.9 or higher
@@ -28,6 +48,7 @@ A Telegram bot that automatically reads Spotify links from group chats and adds 
 - Spotify Developer Application credentials
 - A Spotify playlist ID where tracks will be added
 - A publicly accessible URL for webhooks (production deployment)
+- Docker (optional, for containerized deployment)
 
 ## Setup Instructions
 
@@ -86,13 +107,30 @@ APP_PORT=8000
 
 **Important:** Do NOT commit your `.env` file to version control!
 
-### 4. Install Dependencies
+### 4. Verify Setup (Optional but Recommended)
+
+Run the verification script to check if everything is configured correctly:
+
+```bash
+python verify.py
+```
+
+This will check:
+- Required files exist
+- Environment variables are configured
+- Dependencies are installed
+- Code syntax is valid
+- Spotify authentication status
+
+### 5. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
+# or
+make install
 ```
 
-### 5. Authenticate with Spotify
+### 6. Authenticate with Spotify
 
 Before running the bot, authenticate with Spotify:
 
@@ -278,17 +316,65 @@ Once the bot is running and added to your group:
 
 ```
 telegram-to-spotify-playlist-bot/
-├── main.py              # Main application code
-├── config.py            # Configuration management
-├── requirements.txt     # Python dependencies
-├── Dockerfile          # Docker configuration
-├── .env                # Environment variables (not in git)
-├── .gitignore         # Git ignore rules
-├── pyproject.toml     # Project metadata
-└── README.md          # This file
+├── main.py                   # Main application code
+├── config.py                 # Configuration management
+├── requirements.txt          # Python dependencies
+├── Dockerfile               # Docker configuration
+├── docker-compose.yml       # Docker Compose setup
+├── Makefile                 # Helpful Make commands
+├── setup.sh                 # Interactive setup script
+├── verify.py                # Configuration verification
+├── .env                     # Environment variables (not in git)
+├── .env.example             # Environment template
+├── .gitignore              # Git ignore rules
+├── pyproject.toml          # Project metadata
+├── README.md               # This file
+├── DEPLOYMENT.md           # Comprehensive deployment guide
+└── .github/
+    └── workflows/
+        ├── ci.yml          # CI/CD workflow
+        └── docker-publish.yml  # Docker build and publish
 ```
 
+## Deployment
+
+For production deployment options (Heroku, Railway, DigitalOcean, AWS, Google Cloud), see the comprehensive [DEPLOYMENT.md](DEPLOYMENT.md) guide.
+
+Quick deployment options:
+- **Docker Compose**: `make up` (recommended for VPS)
+- **Heroku**: See [DEPLOYMENT.md](DEPLOYMENT.md#heroku)
+- **Railway**: See [DEPLOYMENT.md](DEPLOYMENT.md#railwayapp)
+- **GitHub Container Registry**: Automatic builds on push to main
+
 ## Development
+
+### Helpful Commands
+
+The project includes several tools to make development easier:
+
+```bash
+# Setup and verification
+./setup.sh          # Interactive setup wizard
+python verify.py    # Verify configuration
+
+# Development
+make install        # Install dependencies
+make auth          # Authenticate with Spotify
+make run           # Run locally
+make format        # Format code with Black
+make lint          # Run linters
+
+# Docker
+make build         # Build Docker image
+make up            # Start with Docker Compose
+make down          # Stop containers
+make logs          # View logs
+make restart       # Restart containers
+
+# Health and monitoring
+make health        # Check bot health
+make webhook-info  # Check Telegram webhook status
+```
 
 ### Code Style
 
@@ -296,6 +382,8 @@ Format code with Black:
 ```bash
 pip install black
 black main.py config.py
+# or
+make format
 ```
 
 ### Adding Features
